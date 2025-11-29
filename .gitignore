@@ -1,0 +1,34 @@
+# Build output
+target/
+build/
+
+# IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+
+# Config files with secrets
+config.yaml
+!src/main/resources/config.yaml
+
+# Temp files
+*.tmp
+*.bak
+
