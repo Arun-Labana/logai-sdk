@@ -47,14 +47,9 @@ Create or update `src/main/resources/logback.xml`:
         </encoder>
     </appender>
 
-    <!-- LogAI Remote Appender -->
+    <!-- LogAI - only appId is required! -->
     <appender name="LOGAI" class="com.logai.remote.RemoteLogAppender">
-        <supabaseUrl>YOUR_SUPABASE_URL</supabaseUrl>
-        <supabaseKey>YOUR_SUPABASE_ANON_KEY</supabaseKey>
         <appId>YOUR_APP_ID_FROM_DASHBOARD</appId>
-        <threshold>WARN</threshold>
-        <batchSize>10</batchSize>
-        <flushIntervalMs>2000</flushIntervalMs>
     </appender>
 
     <root level="INFO">
@@ -63,6 +58,8 @@ Create or update `src/main/resources/logback.xml`:
     </root>
 </configuration>
 ```
+
+**That's it!** Just one line of config - your App ID. The SDK handles everything else.
 
 ### Step 4: Get Your Credentials
 
@@ -132,14 +129,14 @@ Create or update `src/main/resources/logback.xml`:
 
 ## 📋 Configuration Options
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `supabaseUrl` | Supabase project URL | Required |
-| `supabaseKey` | Supabase anon/public key | Required |
-| `appId` | Application ID from dashboard | Required |
-| `threshold` | Minimum log level to send | `WARN` |
-| `batchSize` | Number of logs per batch | `10` |
-| `flushIntervalMs` | Max time before flush | `2000` |
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `appId` | Application ID from dashboard | - | **Yes** |
+| `threshold` | Minimum log level to send | `WARN` | No |
+| `batchSize` | Number of logs per batch | `50` | No |
+| `flushIntervalMs` | Max time before flush (ms) | `5000` | No |
+
+> **Note:** `supabaseUrl` and `supabaseKey` are built into the SDK - you don't need to configure them!
 
 ---
 

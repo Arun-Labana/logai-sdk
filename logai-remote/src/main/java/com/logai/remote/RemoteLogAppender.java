@@ -15,14 +15,19 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * Logback appender that sends logs to Supabase.
+ * Logback appender that sends logs to LogAI cloud.
  * 
- * Configuration in logback.xml:
+ * Minimal configuration in logback.xml (only appId required!):
  * <pre>
- * &lt;appender name="LOGAI_REMOTE" class="com.logai.remote.RemoteLogAppender"&gt;
- *     &lt;supabaseUrl&gt;https://xxx.supabase.co&lt;/supabaseUrl&gt;
- *     &lt;supabaseKey&gt;${SUPABASE_KEY}&lt;/supabaseKey&gt;
- *     &lt;appId&gt;your-app-uuid&lt;/appId&gt;
+ * &lt;appender name="LOGAI" class="com.logai.remote.RemoteLogAppender"&gt;
+ *     &lt;appId&gt;your-app-id-from-dashboard&lt;/appId&gt;
+ * &lt;/appender&gt;
+ * </pre>
+ * 
+ * Optional configuration:
+ * <pre>
+ * &lt;appender name="LOGAI" class="com.logai.remote.RemoteLogAppender"&gt;
+ *     &lt;appId&gt;your-app-id&lt;/appId&gt;
  *     &lt;threshold&gt;WARN&lt;/threshold&gt;
  *     &lt;batchSize&gt;50&lt;/batchSize&gt;
  *     &lt;flushIntervalMs&gt;5000&lt;/flushIntervalMs&gt;
@@ -31,14 +36,18 @@ import java.util.concurrent.*;
  */
 public class RemoteLogAppender extends AppenderBase<ILoggingEvent> {
 
+    // LogAI Cloud defaults - users don't need to configure these!
+    private static final String DEFAULT_SUPABASE_URL = "https://rdlhvdpuxddbryhepukn.supabase.co";
+    private static final String DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbGh2ZHB1eGRkYnJ5aGVwdWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MDQyNjksImV4cCI6MjA3OTk4MDI2OX0.8Pm2NH4twqhtJgBxdysbmB-y6V-dh_-FHwyUJUHG5kk";
+    
     private static final int DEFAULT_BATCH_SIZE = 50;
     private static final int DEFAULT_FLUSH_INTERVAL_MS = 5000;
     private static final int DEFAULT_QUEUE_SIZE = 5000;
 
-    // Configuration properties
-    private String supabaseUrl;
-    private String supabaseKey;
-    private String appId;
+    // Configuration properties (with sensible defaults)
+    private String supabaseUrl = DEFAULT_SUPABASE_URL;
+    private String supabaseKey = DEFAULT_SUPABASE_KEY;
+    private String appId;  // Only this is required!
     private String threshold = "WARN";
     private int batchSize = DEFAULT_BATCH_SIZE;
     private int flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS;
@@ -58,17 +67,9 @@ public class RemoteLogAppender extends AppenderBase<ILoggingEvent> {
             return;
         }
 
-        // Validate configuration
-        if (supabaseUrl == null || supabaseUrl.isEmpty()) {
-            addError("supabaseUrl is required");
-            return;
-        }
-        if (supabaseKey == null || supabaseKey.isEmpty()) {
-            addError("supabaseKey is required");
-            return;
-        }
+        // Validate configuration - only appId is required!
         if (appId == null || appId.isEmpty()) {
-            addError("appId is required");
+            addError("appId is required - get it from the LogAI dashboard at https://logai-frontend-app.vercel.app");
             return;
         }
 
