@@ -1,277 +1,164 @@
-# LogAI - LLM-Powered Java Log Analyzer & Auto-Fix Engine
+# LogAI SDK
 
-LogAI is an intelligent log analysis tool that automatically identifies error patterns, explains root causes using AI, and generates code fixes for Java applications.
+🤖 **LLM-powered Java Log Analyzer & Auto-Fix Engine**
 
-## Features
+Automatically analyze Java application logs, identify recurring issues, explain them in human language, and generate code fixes using AI.
 
-- **Smart Error Clustering** - Groups similar errors by stack trace fingerprinting and message similarity
-- **Code-Aware Debugging** - Extracts source code context around error locations
-- **AI-Powered Analysis** - Uses OpenAI GPT-4 to explain errors and suggest fixes
-- **Automatic Patch Generation** - Creates unified diff patches for identified bugs
-- **Web Dashboard** - Modern React-based UI for visual log analysis
-- **Remote Logging** - Centralized log storage with Supabase (free tier)
-- **Beautiful Reports** - Generates HTML, Markdown, and JSON reports
+[![](https://jitpack.io/v/Arun-Labana/logai-sdk.svg)](https://jitpack.io/#Arun-Labana/logai-sdk)
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Option 1: Local CLI (Offline)
+### Step 1: Add JitPack Repository
 
-For local-only usage with SQLite storage:
+Add the JitPack repository to your `pom.xml`:
 
-#### 1. Build the Project
-
-```bash
-cd logai
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
-mvn clean package -DskipTests
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
 ```
 
-#### 2. Configure OpenAI API Key
-
-```bash
-export OPENAI_API_KEY='your-api-key-here'
-```
-
-#### 3. Add LogAI SDK to Your Application
+### Step 2: Add Dependency
 
 ```xml
 <dependency>
-    <groupId>com.logai</groupId>
-    <artifactId>logai-sdk</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
-
-Configure Logback (`src/main/resources/logback.xml`):
-```xml
-<appender name="LOGAI" class="com.logai.sdk.LogAIAppender">
-    <dbPath>logai.db</dbPath>
-    <threshold>WARN</threshold>
-</appender>
-
-<root level="INFO">
-    <appender-ref ref="LOGAI"/>
-</root>
-```
-
-#### 4. Analyze Logs with CLI
-
-```bash
-java -jar logai-cli/target/logai.jar scan --last 1h --analyze
-java -jar logai-cli/target/logai.jar clusters
-java -jar logai-cli/target/logai.jar fix --generate ERR-12345678
-```
-
----
-
-### Option 2: Web Dashboard (Remote)
-
-For centralized logging with a web UI - **100% free infrastructure**.
-
-#### 1. Set Up Supabase (5 minutes)
-
-1. Create a free account at [supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to SQL Editor and run the contents of `supabase/schema.sql`
-4. Copy your Project URL and anon key from Settings → API
-
-See `supabase/setup.md` for detailed instructions.
-
-#### 2. Deploy the Dashboard
-
-```bash
-cd dashboard
-npm install
-
-# Create .env file
-echo "VITE_SUPABASE_URL=https://your-project.supabase.co" > .env
-echo "VITE_SUPABASE_ANON_KEY=your-anon-key" >> .env
-
-# Run locally
-npm run dev
-
-# Or build for production
-npm run build
-# Deploy dist/ folder to Vercel, Netlify, or GitHub Pages (all free)
-```
-
-#### 3. Configure Remote Logging
-
-Add the remote SDK to your Java application:
-
-```xml
-<dependency>
-    <groupId>com.logai</groupId>
+    <groupId>com.github.Arun-Labana.logai-sdk</groupId>
     <artifactId>logai-remote</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>main-SNAPSHOT</version>
 </dependency>
 ```
 
-Configure Logback for remote logging:
+### Step 3: Configure Logback
+
+Create or update `src/main/resources/logback.xml`:
+
 ```xml
-<appender name="LOGAI_REMOTE" class="com.logai.remote.RemoteLogAppender">
-    <supabaseUrl>${SUPABASE_URL}</supabaseUrl>
-    <supabaseKey>${SUPABASE_KEY}</supabaseKey>
-    <appId>your-app-id-from-dashboard</appId>
-    <threshold>WARN</threshold>
-    <batchSize>50</batchSize>
-    <flushIntervalMs>5000</flushIntervalMs>
-</appender>
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
 
-<root level="INFO">
-    <appender-ref ref="LOGAI_REMOTE"/>
-</root>
+    <!-- LogAI Remote Appender -->
+    <appender name="LOGAI" class="com.logai.remote.RemoteLogAppender">
+        <supabaseUrl>YOUR_SUPABASE_URL</supabaseUrl>
+        <supabaseKey>YOUR_SUPABASE_ANON_KEY</supabaseKey>
+        <appId>YOUR_APP_ID_FROM_DASHBOARD</appId>
+        <threshold>WARN</threshold>
+        <batchSize>10</batchSize>
+        <flushIntervalMs>2000</flushIntervalMs>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="LOGAI" />
+    </root>
+</configuration>
 ```
 
-#### 4. Use the Dashboard
+### Step 4: Get Your Credentials
 
-1. Open the dashboard in your browser
-2. Go to Settings and enter your OpenAI API key
-3. Add your application and copy the App ID
-4. Start your Java app with the remote appender configured
-5. Click "Run Scan" to analyze errors
-6. View AI-generated explanations and fixes
+1. Go to the [LogAI Dashboard](https://logai-frontend-app.vercel.app)
+2. Sign up / Log in
+3. Create a new application in Settings
+4. Copy the **App ID** and configure it in your `logback.xml`
 
 ---
 
-## Web Dashboard Features
-
-| Feature | Description |
-|---------|-------------|
-| **App Management** | Register multiple applications |
-| **Error Clusters** | View grouped errors with severity badges |
-| **AI Analysis** | Get explanations and root cause analysis |
-| **Patch Generation** | Download unified diff patches |
-| **Scan History** | Track analysis runs over time |
-| **Real-time Updates** | See logs as they arrive |
-
----
-
-## CLI Commands
-
-### `logai scan`
-Scan and analyze recent logs for errors.
-
-```
-Options:
-  --last, -l       Time range to scan (e.g., 1h, 30m, 7d). Default: 1h
-  --db, -d         Database path
-  --analyze, -a    Analyze errors with LLM
-  --limit, -n      Limit number of clusters to analyze
-  --verbose, -v    Verbose output
-```
-
-### `logai clusters`
-List and inspect error clusters.
-
-```
-Options:
-  <cluster-id>     Cluster ID to inspect (optional)
-  --limit, -n      Maximum clusters to show
-  --last, -l       Time range
-  --verbose, -v    Show stack traces
-```
-
-### `logai fix`
-Generate and apply code fixes.
-
-```
-Options:
-  --generate, -g   Generate a fix for a cluster
-  --apply, -a      Apply a patch file
-  --dry-run        Preview changes without applying
-  --list, -l       List available patches
-```
-
-### `logai report`
-Generate health reports.
-
-```
-Options:
-  --format, -f     Report format: html, json, md (default: md)
-  --output, -o     Output file path
-  --last, -l       Time range
-```
-
----
-
-## Architecture
-
-### Local Mode
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Your Java App  │────▶│   LogAI SDK     │────▶│  SQLite DB      │
-│  (Logback)      │     │  (Appender)     │     │  (logai.db)     │
-└─────────────────┘     └─────────────────┘     └────────┬────────┘
-                                                         │
-                        ┌────────────────────────────────┘
-                        ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   LogAI CLI     │────▶│  Error          │────▶│   OpenAI API    │
-│                 │     │  Clusterer      │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-```
-
-### Remote Mode
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Your Java App  │────▶│  LogAI Remote   │────▶│   Supabase      │
-│  (Logback)      │     │  (HTTP Client)  │     │   PostgreSQL    │
-└─────────────────┘     └─────────────────┘     └────────┬────────┘
-                                                         │
-                        ┌────────────────────────────────┤
-                        ▼                                ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Web Dashboard  │◀────│  Edge Functions │────▶│   OpenAI API    │
-│  (React)        │     │  (Deno)         │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-```
-
----
-
-## Modules
+## 📦 Modules
 
 | Module | Description |
 |--------|-------------|
-| `logai-core` | Domain models, stack trace parser, error clusterer |
-| `logai-sdk` | Logback appender, log enricher, SQLite storage |
-| `logai-remote` | Remote logging to Supabase |
-| `logai-llm` | OpenAI client, prompt builder, insight generator |
-| `logai-cli` | Picocli commands for the CLI |
-| `logai-report` | HTML, Markdown, JSON report generators |
-| `dashboard` | React web dashboard |
-| `supabase` | Database schema and Edge Functions |
+| `logai-remote` | Remote logging appender - sends logs to cloud |
+| `logai-sdk` | Local SQLite-based log storage |
+| `logai-core` | Core analysis: stack trace parsing, error clustering |
+| `logai-llm` | LLM integration for AI analysis |
+| `logai-cli` | Command-line interface |
+| `logai-report` | Report generation (Markdown, HTML, JSON) |
 
 ---
 
-## Cost Summary
+## 🔧 How It Works
 
-All infrastructure is free except OpenAI API usage:
-
-| Service | Free Tier | Cost |
-|---------|-----------|------|
-| Supabase DB | 500MB, 50K rows | Free |
-| Supabase Edge Functions | 500K invocations/mo | Free |
-| Vercel/Netlify | Hosting | Free |
-| OpenAI API | Pay per use | ~$0.01-0.10/analysis |
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────┐
+│   Your App      │     │  RemoteLogAppender   │     │  Supabase   │
+│                 │     │                      │     │  (Cloud DB) │
+│ logger.error()  │ ──► │  Intercepts WARN+    │ ──► │  Stores     │
+│                 │     │  Batches & sends     │     │  log_entries│
+└─────────────────┘     └──────────────────────┘     └─────────────┘
+                                                            │
+                                                            ▼
+                        ┌──────────────────────┐     ┌─────────────┐
+                        │  AI Analysis         │ ◄── │  Dashboard  │
+                        │  (Gemini LLM)        │     │  Scan/View  │
+                        │  - Root cause        │     └─────────────┘
+                        │  - Code fix patches  │
+                        └──────────────────────┘
+```
 
 ---
 
-## Requirements
+## ✨ Features
 
-- Java 17+
-- Maven 3.8+
-- Node.js 18+ (for dashboard)
-- OpenAI API key (for AI analysis features)
+- **Zero Code Changes** - Just add dependency and configure logback
+- **Async Batching** - Logs are batched to minimize performance impact
+- **Smart Filtering** - Only WARN/ERROR logs sent to cloud (configurable)
+- **Error Clustering** - Groups similar errors together
+- **AI Analysis** - Explains root cause in plain English
+- **Multi-File Fixes** - Generates unified diff patches across files
+- **GitHub Integration** - Fetches actual source code for accurate fixes
 
 ---
 
-## License
+## 🌐 Related Projects
 
-MIT License
+| Component | Repository | Live URL |
+|-----------|------------|----------|
+| **SDK** | [logai-sdk](https://github.com/Arun-Labana/logai-sdk) | [JitPack](https://jitpack.io/#Arun-Labana/logai-sdk) |
+| **Backend** | [logai-backend](https://github.com/Arun-Labana/logai-backend) | [Render](https://logai-backend.onrender.com) |
+| **Frontend** | [logai-frontend](https://github.com/Arun-Labana/logai-frontend) | [Vercel](https://logai-frontend-app.vercel.app) |
+| **Sample App** | [sample-logai-app](https://github.com/Arun-Labana/sample-logai-app) | - |
 
-## Contributing
+---
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+## 📋 Configuration Options
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `supabaseUrl` | Supabase project URL | Required |
+| `supabaseKey` | Supabase anon/public key | Required |
+| `appId` | Application ID from dashboard | Required |
+| `threshold` | Minimum log level to send | `WARN` |
+| `batchSize` | Number of logs per batch | `10` |
+| `flushIntervalMs` | Max time before flush | `2000` |
+
+---
+
+## 🛠️ Building from Source
+
+```bash
+git clone https://github.com/Arun-Labana/logai-sdk.git
+cd logai-sdk
+mvn clean install
+```
+
+---
+
+## 📄 License
+
+MIT License - feel free to use in your projects!
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please open an issue or PR.
