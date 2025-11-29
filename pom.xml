@@ -18,6 +18,7 @@
         <module>logai-llm</module>
         <module>logai-cli</module>
         <module>logai-report</module>
+        <module>logai-remote</module>
     </modules>
 
     <properties>
