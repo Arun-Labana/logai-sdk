@@ -20,6 +20,10 @@
             <artifactId>logai-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.logai</groupId>
+            <artifactId>logai-llm</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
