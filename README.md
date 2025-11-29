@@ -8,42 +8,34 @@ LogAI is an intelligent log analysis tool that automatically identifies error pa
 - **Code-Aware Debugging** - Extracts source code context around error locations
 - **AI-Powered Analysis** - Uses OpenAI GPT-4 to explain errors and suggest fixes
 - **Automatic Patch Generation** - Creates unified diff patches for identified bugs
-- **Zero-Latency Impact** - Runs offline, separate from your application
+- **Web Dashboard** - Modern React-based UI for visual log analysis
+- **Remote Logging** - Centralized log storage with Supabase (free tier)
 - **Beautiful Reports** - Generates HTML, Markdown, and JSON reports
+
+---
 
 ## Quick Start
 
-### 1. Build the Project
+### Option 1: Local CLI (Offline)
+
+For local-only usage with SQLite storage:
+
+#### 1. Build the Project
 
 ```bash
 cd logai
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 mvn clean package -DskipTests
 ```
 
-### 2. Configure OpenAI API Key
+#### 2. Configure OpenAI API Key
 
 ```bash
 export OPENAI_API_KEY='your-api-key-here'
 ```
 
-Or create a config file:
-```bash
-mkdir -p ~/.logai
-cat > ~/.logai/config.yaml << EOF
-openai:
-  api_key: \${OPENAI_API_KEY}
-  model: gpt-4o
-database:
-  path: ./logai.db
-source:
-  paths:
-    - ./src/main/java
-EOF
-```
+#### 3. Add LogAI SDK to Your Application
 
-### 3. Add LogAI SDK to Your Application
-
-Add the dependency to your `pom.xml`:
 ```xml
 <dependency>
     <groupId>com.logai</groupId>
@@ -60,35 +52,102 @@ Configure Logback (`src/main/resources/logback.xml`):
 </appender>
 
 <root level="INFO">
-    <appender-ref ref="CONSOLE"/>
     <appender-ref ref="LOGAI"/>
 </root>
 ```
 
-### 4. Analyze Logs
+#### 4. Analyze Logs with CLI
 
 ```bash
-# Scan recent logs
-java -jar logai-cli/target/logai.jar scan --last 1h
-
-# Scan with AI analysis
 java -jar logai-cli/target/logai.jar scan --last 1h --analyze
-
-# View error clusters
 java -jar logai-cli/target/logai.jar clusters
-
-# Inspect a specific cluster
-java -jar logai-cli/target/logai.jar clusters ERR-12345678
-
-# Generate a fix
 java -jar logai-cli/target/logai.jar fix --generate ERR-12345678
-
-# Apply a patch (dry run)
-java -jar logai-cli/target/logai.jar fix --apply logai-fixes/MyClass_ERR-12345678.diff --dry-run
-
-# Generate a report
-java -jar logai-cli/target/logai.jar report --format html -o report.html
 ```
+
+---
+
+### Option 2: Web Dashboard (Remote)
+
+For centralized logging with a web UI - **100% free infrastructure**.
+
+#### 1. Set Up Supabase (5 minutes)
+
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to SQL Editor and run the contents of `supabase/schema.sql`
+4. Copy your Project URL and anon key from Settings → API
+
+See `supabase/setup.md` for detailed instructions.
+
+#### 2. Deploy the Dashboard
+
+```bash
+cd dashboard
+npm install
+
+# Create .env file
+echo "VITE_SUPABASE_URL=https://your-project.supabase.co" > .env
+echo "VITE_SUPABASE_ANON_KEY=your-anon-key" >> .env
+
+# Run locally
+npm run dev
+
+# Or build for production
+npm run build
+# Deploy dist/ folder to Vercel, Netlify, or GitHub Pages (all free)
+```
+
+#### 3. Configure Remote Logging
+
+Add the remote SDK to your Java application:
+
+```xml
+<dependency>
+    <groupId>com.logai</groupId>
+    <artifactId>logai-remote</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+Configure Logback for remote logging:
+```xml
+<appender name="LOGAI_REMOTE" class="com.logai.remote.RemoteLogAppender">
+    <supabaseUrl>${SUPABASE_URL}</supabaseUrl>
+    <supabaseKey>${SUPABASE_KEY}</supabaseKey>
+    <appId>your-app-id-from-dashboard</appId>
+    <threshold>WARN</threshold>
+    <batchSize>50</batchSize>
+    <flushIntervalMs>5000</flushIntervalMs>
+</appender>
+
+<root level="INFO">
+    <appender-ref ref="LOGAI_REMOTE"/>
+</root>
+```
+
+#### 4. Use the Dashboard
+
+1. Open the dashboard in your browser
+2. Go to Settings and enter your OpenAI API key
+3. Add your application and copy the App ID
+4. Start your Java app with the remote appender configured
+5. Click "Run Scan" to analyze errors
+6. View AI-generated explanations and fixes
+
+---
+
+## Web Dashboard Features
+
+| Feature | Description |
+|---------|-------------|
+| **App Management** | Register multiple applications |
+| **Error Clusters** | View grouped errors with severity badges |
+| **AI Analysis** | Get explanations and root cause analysis |
+| **Patch Generation** | Download unified diff patches |
+| **Scan History** | Track analysis runs over time |
+| **Real-time Updates** | See logs as they arrive |
+
+---
 
 ## CLI Commands
 
@@ -136,18 +195,11 @@ Options:
   --last, -l       Time range
 ```
 
-### `logai config`
-Manage configuration.
-
-```
-Options:
-  --list, -l       List all config values
-  --set, -s        Set a config value
-  --init           Initialize config with defaults
-```
+---
 
 ## Architecture
 
+### Local Mode
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Your Java App  │────▶│   LogAI SDK     │────▶│  SQLite DB      │
@@ -158,16 +210,26 @@ Options:
                         ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   LogAI CLI     │────▶│  Error          │────▶│   OpenAI API    │
-│   (scan)        │     │  Clusterer      │     │   (GPT-4)       │
-└─────────────────┘     └─────────────────┘     └────────┬────────┘
-                                                         │
-                        ┌────────────────────────────────┘
-                        ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Code Context   │────▶│   Insight       │────▶│   Patch         │
-│  Extractor      │     │   Generator     │     │   Generator     │
+│                 │     │  Clusterer      │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
+
+### Remote Mode
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Your Java App  │────▶│  LogAI Remote   │────▶│   Supabase      │
+│  (Logback)      │     │  (HTTP Client)  │     │   PostgreSQL    │
+└─────────────────┘     └─────────────────┘     └────────┬────────┘
+                                                         │
+                        ┌────────────────────────────────┤
+                        ▼                                ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Web Dashboard  │◀────│  Edge Functions │────▶│   OpenAI API    │
+│  (React)        │     │  (Deno)         │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+---
 
 ## Modules
 
@@ -175,50 +237,36 @@ Options:
 |--------|-------------|
 | `logai-core` | Domain models, stack trace parser, error clusterer |
 | `logai-sdk` | Logback appender, log enricher, SQLite storage |
+| `logai-remote` | Remote logging to Supabase |
 | `logai-llm` | OpenAI client, prompt builder, insight generator |
 | `logai-cli` | Picocli commands for the CLI |
 | `logai-report` | HTML, Markdown, JSON report generators |
+| `dashboard` | React web dashboard |
+| `supabase` | Database schema and Edge Functions |
 
-## How Error Clustering Works
+---
 
-LogAI groups similar errors using multiple strategies:
+## Cost Summary
 
-1. **Stack Trace Fingerprinting** - Hash of top 5 non-framework stack frames
-2. **Message Similarity** - Levenshtein distance after normalizing variables
-3. **Location Matching** - Same file + line + method
+All infrastructure is free except OpenAI API usage:
 
-This ensures errors like "User 12345 not found" and "User 67890 not found" are grouped together.
+| Service | Free Tier | Cost |
+|---------|-----------|------|
+| Supabase DB | 500MB, 50K rows | Free |
+| Supabase Edge Functions | 500K invocations/mo | Free |
+| Vercel/Netlify | Hosting | Free |
+| OpenAI API | Pay per use | ~$0.01-0.10/analysis |
 
-## Example Output
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║                    LogAI Error Scanner                        ║
-╚══════════════════════════════════════════════════════════════╝
-
-📊 Scanning logs from 2024-01-15T09:00:00Z to 2024-01-15T10:00:00Z
-📁 Database: logai.db
-
-🔍 Found 156 error entries
-
-📦 Grouped into 12 unique error clusters
-
-┌──────────────────────────────────────────────────────────────┐
-│ Top Error Clusters                                           │
-├──────────────────────────────────────────────────────────────┤
-│ 🔴 ERR-A1B2C3D4 │  89 occurrences │ NullPointerException     │
-│   └─ Location: OrderService.processOrder:23                  │
-├──────────────────────────────────────────────────────────────┤
-│ 🟠 ERR-E5F6G7H8 │  34 occurrences │ IllegalStateException    │
-│   └─ Location: PaymentService.charge:89                      │
-└──────────────────────────────────────────────────────────────┘
-```
+---
 
 ## Requirements
 
 - Java 17+
 - Maven 3.8+
+- Node.js 18+ (for dashboard)
 - OpenAI API key (for AI analysis features)
+
+---
 
 ## License
 
@@ -227,4 +275,3 @@ MIT License
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
-
