@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { 
   ArrowLeft,
   Play,
   CheckCircle,
   XCircle,
   Loader2,
-  AlertTriangle,
   Sparkles
 } from 'lucide-react'
 import { 
   getApplication,
-  getSetting,
   triggerScan,
   Application
 } from '../lib/supabase'
@@ -27,7 +25,6 @@ interface ScanResult {
 
 export default function Scan() {
   const { appId } = useParams<{ appId: string }>()
-  const navigate = useNavigate()
   const [app, setApp] = useState<Application | null>(null)
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
@@ -35,7 +32,6 @@ export default function Scan() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [hours, setHours] = useState(24)
-  const [hasApiKey, setHasApiKey] = useState(false)
 
   useEffect(() => {
     if (appId) {
@@ -45,12 +41,8 @@ export default function Scan() {
 
   async function loadData() {
     try {
-      const [appData, apiKey] = await Promise.all([
-        getApplication(appId!),
-        getSetting('openai_api_key')
-      ])
+      const appData = await getApplication(appId!)
       setApp(appData)
-      setHasApiKey(!!apiKey)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -136,27 +128,6 @@ export default function Scan() {
             </select>
           </div>
 
-          {!hasApiKey && (
-            <div className="bg-logai-warning/10 border border-logai-warning/30 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-logai-warning flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-logai-text-primary">
-                    No OpenAI API key configured
-                  </p>
-                  <p className="text-xs text-logai-text-secondary mt-1">
-                    You can still scan for errors, but AI analysis won't be available.
-                  </p>
-                  <Link
-                    to="/settings"
-                    className="text-xs text-logai-accent hover:underline mt-2 inline-block"
-                  >
-                    Configure API key →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <button

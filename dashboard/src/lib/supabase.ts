@@ -235,18 +235,18 @@ export async function triggerScan(appId: string, hours = 24, analyze = false) {
   return data
 }
 
-export async function analyzeCluster(clusterId: string, openaiApiKey: string) {
+export async function analyzeCluster(clusterId: string) {
   const { data, error } = await supabase.functions.invoke('analyze', {
-    body: { cluster_id: clusterId, openai_api_key: openaiApiKey }
+    body: { cluster_id: clusterId }
   })
   
   if (error) throw error
   return data
 }
 
-export async function generatePatch(clusterId: string, openaiApiKey: string, sourceCode?: string) {
+export async function generatePatch(clusterId: string, sourceCode?: string) {
   const { data, error } = await supabase.functions.invoke('generate-patch', {
-    body: { cluster_id: clusterId, openai_api_key: openaiApiKey, source_code: sourceCode }
+    body: { cluster_id: clusterId, source_code: sourceCode }
   })
   
   if (error) throw error

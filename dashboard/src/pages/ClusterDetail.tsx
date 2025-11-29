@@ -6,7 +6,6 @@ import {
   Download,
   Copy,
   Check,
-  AlertTriangle,
   Clock,
   Target,
   Loader2
@@ -15,7 +14,6 @@ import {
   getErrorCluster,
   getClusterAnalysis,
   getApplication,
-  getSetting,
   analyzeCluster,
   generatePatch,
   updateClusterStatus,
@@ -23,7 +21,7 @@ import {
   AnalysisResult,
   Application
 } from '../lib/supabase'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 
 export default function ClusterDetail() {
   const { clusterId } = useParams<{ clusterId: string }>()
@@ -34,7 +32,6 @@ export default function ClusterDetail() {
   const [analyzing, setAnalyzing] = useState(false)
   const [generatingPatch, setGeneratingPatch] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [apiKey, setApiKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,14 +46,12 @@ export default function ClusterDetail() {
       setCluster(clusterData)
       
       if (clusterData) {
-        const [analysisData, appData, key] = await Promise.all([
+        const [analysisData, appData] = await Promise.all([
           getClusterAnalysis(clusterId!),
           getApplication(clusterData.app_id),
-          getSetting('openai_api_key')
         ])
         setAnalysis(analysisData)
         setApp(appData)
-        setApiKey(key)
       }
     } catch (error) {
       console.error('Failed to load cluster:', error)
@@ -66,13 +61,13 @@ export default function ClusterDetail() {
   }
 
   async function handleAnalyze() {
-    if (!apiKey || !clusterId) return
+    if (!clusterId) return
     
     setAnalyzing(true)
     setError(null)
     
     try {
-      const result = await analyzeCluster(clusterId, apiKey)
+      const result = await analyzeCluster(clusterId)
       setAnalysis({
         ...result,
         cluster_id: clusterId,
@@ -86,13 +81,13 @@ export default function ClusterDetail() {
   }
 
   async function handleGeneratePatch() {
-    if (!apiKey || !clusterId) return
+    if (!clusterId) return
     
     setGeneratingPatch(true)
     setError(null)
     
     try {
-      const result = await generatePatch(clusterId, apiKey)
+      const result = await generatePatch(clusterId)
       if (result.patch) {
         setAnalysis(prev => prev ? { ...prev, patch: result.patch } : null)
       }
@@ -238,7 +233,7 @@ export default function ClusterDetail() {
                 <Sparkles className="w-5 h-5 text-logai-accent" />
                 AI Analysis
               </h3>
-              {!analysis && apiKey && (
+              {!analysis && (
                 <button
                   onClick={handleAnalyze}
                   disabled={analyzing}
@@ -258,23 +253,8 @@ export default function ClusterDetail() {
                 </button>
               )}
             </div>
-            
-            {!analysis && !apiKey && (
-              <div className="p-6 text-center">
-                <AlertTriangle className="w-8 h-8 text-logai-warning mx-auto mb-3" />
-                <p className="text-logai-text-secondary mb-2">
-                  OpenAI API key not configured
-                </p>
-                <Link
-                  to="/settings"
-                  className="text-logai-accent hover:underline text-sm"
-                >
-                  Configure in Settings →
-                </Link>
-              </div>
-            )}
 
-            {!analysis && apiKey && !analyzing && (
+            {!analysis && !analyzing && (
               <div className="p-6 text-center text-logai-text-secondary">
                 Click "Analyze with AI" to generate insights and a potential fix.
               </div>
@@ -340,7 +320,7 @@ export default function ClusterDetail() {
                 Suggested Fix
               </h3>
               <div className="flex items-center gap-2">
-                {analysis && !analysis.patch && apiKey && (
+                {analysis && !analysis.patch && (
                   <button
                     onClick={handleGeneratePatch}
                     disabled={generatingPatch}

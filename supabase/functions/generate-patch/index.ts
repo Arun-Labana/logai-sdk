@@ -1,8 +1,9 @@
 // Supabase Edge Function: generate-patch
-// Generates a code fix patch for an error cluster
+// Generates a code fix patch for an error cluster using Intuit LLM
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callIntuitLLMWithSystem } from "../_shared/intuit-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,6 @@ const corsHeaders = {
 interface GeneratePatchRequest {
   cluster_id: string;
   analysis_id?: string;
-  openai_api_key: string;
   source_code?: string; // Optional: provide source code for better patches
   model?: string;
 }
@@ -54,21 +54,13 @@ serve(async (req) => {
     const { 
       cluster_id, 
       analysis_id, 
-      openai_api_key, 
       source_code,
-      model = "gpt-4o" 
+      model = "gpt-5-2025-08-07" 
     }: GeneratePatchRequest = await req.json();
 
     if (!cluster_id) {
       return new Response(
         JSON.stringify({ error: "cluster_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!openai_api_key) {
-      return new Response(
-        JSON.stringify({ error: "openai_api_key is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -120,36 +112,20 @@ serve(async (req) => {
     const sampleLog = sampleLogs?.[0];
 
     // Build the prompt
-    const prompt = buildPatchPrompt(cluster, analysis, sampleLog, source_code);
+    const userPrompt = buildPatchPrompt(cluster, analysis, sampleLog, source_code);
 
-    // Call OpenAI API
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openai_api_key}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: PATCH_SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 2048,
-        temperature: 0.1, // Lower temperature for more precise code generation
-      }),
-    });
-
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
-    }
-
-    const openaiData = await openaiResponse.json();
-    const assistantMessage = openaiData.choices?.[0]?.message?.content;
+    // Call Intuit LLM
+    console.log("🤖 Calling Intuit LLM for patch generation...");
+    const assistantMessage = await callIntuitLLMWithSystem(
+      PATCH_SYSTEM_PROMPT,
+      userPrompt,
+      model,
+      0.1, // Lower temperature for more precise code generation
+      2048
+    );
 
     if (!assistantMessage) {
-      throw new Error("No response from OpenAI");
+      throw new Error("No response from Intuit LLM");
     }
 
     // Extract patch from response
@@ -321,4 +297,3 @@ function formatPatch(patch: string): string {
   
   return formatted;
 }
-

@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react'
 import { 
-  Key, 
-  Save, 
-  Check,
-  Eye,
-  EyeOff,
-  AlertTriangle,
+  Server, 
   Trash2,
   Plus,
-  Copy
+  Copy,
+  Check,
+  Zap
 } from 'lucide-react'
 import { 
-  getSetting,
-  setSetting,
   getApplications,
   createApplication,
   deleteApplication,
@@ -20,10 +15,6 @@ import {
 } from '../lib/supabase'
 
 export default function Settings() {
-  const [apiKey, setApiKey] = useState('')
-  const [showKey, setShowKey] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [apps, setApps] = useState<Application[]>([])
   const [showNewApp, setShowNewApp] = useState(false)
   const [newAppName, setNewAppName] = useState('')
@@ -32,20 +23,8 @@ export default function Settings() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   useEffect(() => {
-    loadSettings()
     loadApps()
   }, [])
-
-  async function loadSettings() {
-    try {
-      const key = await getSetting('openai_api_key')
-      if (key) {
-        setApiKey(key)
-      }
-    } catch (error) {
-      console.error('Failed to load settings:', error)
-    }
-  }
 
   async function loadApps() {
     try {
@@ -53,19 +32,6 @@ export default function Settings() {
       setApps(applications)
     } catch (error) {
       console.error('Failed to load apps:', error)
-    }
-  }
-
-  async function handleSaveApiKey() {
-    setSaving(true)
-    try {
-      await setSetting('openai_api_key', apiKey)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (error) {
-      console.error('Failed to save API key:', error)
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -111,75 +77,39 @@ export default function Settings() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-logai-text-primary">Settings</h1>
         <p className="text-logai-text-secondary mt-1">
-          Configure LogAI settings and manage applications
+          Manage applications and view integration settings
         </p>
       </div>
 
       <div className="space-y-8">
-        {/* OpenAI API Key */}
+        {/* LLM Info Card */}
         <div className="bg-logai-bg-card border border-logai-border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-logai-accent/10 rounded-lg">
-              <Key className="w-5 h-5 text-logai-accent" />
+              <Zap className="w-5 h-5 text-logai-accent" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-logai-text-primary">
-                OpenAI API Key
+                AI Analysis
               </h2>
               <p className="text-sm text-logai-text-secondary">
-                Required for AI-powered analysis and patch generation
+                Powered by Intuit's internal LLM service
               </p>
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                className="w-full px-4 py-2 bg-logai-bg-secondary border border-logai-border rounded-lg text-logai-text-primary placeholder-logai-text-secondary focus:border-logai-accent focus:outline-none font-mono pr-10"
-              />
-              <button
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-logai-text-secondary hover:text-logai-text-primary"
-              >
-                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          <div className="bg-logai-bg-secondary rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-logai-success rounded-full animate-pulse" />
+              <span className="text-sm text-logai-success font-medium">Connected</span>
             </div>
-            <button
-              onClick={handleSaveApiKey}
-              disabled={saving || !apiKey}
-              className="flex items-center gap-2 px-4 py-2 bg-logai-accent text-black font-medium rounded-lg hover:bg-logai-accent-dim transition-colors disabled:opacity-50"
-            >
-              {saved ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Saved!
-                </>
-              ) : saving ? (
-                'Saving...'
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save
-                </>
-              )}
-            </button>
+            <p className="text-sm text-logai-text-secondary">
+              Model: <span className="text-logai-text-primary font-mono">gpt-5-2025-08-07</span>
+            </p>
+            <p className="text-xs text-logai-text-secondary mt-2">
+              No API key required - authentication handled automatically via Intuit IAM
+            </p>
           </div>
-
-          <p className="text-xs text-logai-text-secondary mt-3">
-            Get your API key from{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-logai-accent hover:underline"
-            >
-              platform.openai.com/api-keys
-            </a>
-          </p>
         </div>
 
         {/* Applications */}
@@ -204,9 +134,17 @@ export default function Settings() {
 
           {apps.length === 0 ? (
             <div className="p-8 text-center">
+              <Server className="w-12 h-12 text-logai-text-secondary mx-auto mb-4" />
               <p className="text-logai-text-secondary">
                 No applications registered yet.
               </p>
+              <button
+                onClick={() => setShowNewApp(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-logai-accent text-black font-medium rounded-lg hover:bg-logai-accent-dim transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Your First App
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-logai-border">
@@ -235,7 +173,7 @@ export default function Settings() {
                         onClick={() => copyToClipboard(app.id, `id-${app.id}`)}
                         className="text-xs text-logai-accent hover:underline flex items-center gap-1"
                       >
-                        <Copy className="w-3 h-3" />
+                        {copiedKey === `id-${app.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         {copiedKey === `id-${app.id}` ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
@@ -249,7 +187,7 @@ export default function Settings() {
                         onClick={() => copyToClipboard(app.api_key, `key-${app.id}`)}
                         className="text-xs text-logai-accent hover:underline flex items-center gap-1"
                       >
-                        <Copy className="w-3 h-3" />
+                        {copiedKey === `key-${app.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         {copiedKey === `key-${app.id}` ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
@@ -285,22 +223,15 @@ export default function Settings() {
         {/* Environment Variables */}
         <div className="bg-logai-bg-card border border-logai-border rounded-xl p-6">
           <h2 className="text-lg font-semibold text-logai-text-primary mb-4">
-            Environment Setup
+            Environment Setup for Java Apps
           </h2>
           
-          <div className="bg-logai-warning/10 border border-logai-warning/30 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-logai-warning flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-logai-text-primary">
-                  Make sure these environment variables are set in your Java application:
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-logai-text-secondary mb-4">
+            Set these environment variables in your Java application:
+          </p>
 
           <pre className="bg-logai-bg-secondary rounded-lg p-4 text-sm font-mono overflow-x-auto">
-{`SUPABASE_URL=your_supabase_url
+{`SUPABASE_URL=https://rdlhvdpuxddbryhepukn.supabase.co
 SUPABASE_KEY=your_supabase_anon_key`}
           </pre>
         </div>
@@ -363,4 +294,3 @@ SUPABASE_KEY=your_supabase_anon_key`}
     </div>
   )
 }
-

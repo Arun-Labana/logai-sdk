@@ -1,8 +1,9 @@
 // Supabase Edge Function: analyze
-// Calls OpenAI API to analyze an error cluster and generate insights
+// Calls Intuit's LLM service to analyze an error cluster and generate insights
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callIntuitLLMWithSystem } from "../_shared/intuit-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,6 @@ const corsHeaders = {
 
 interface AnalyzeRequest {
   cluster_id: string;
-  openai_api_key: string;
   model?: string;
 }
 
@@ -41,18 +41,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { cluster_id, openai_api_key, model = "gpt-4o" }: AnalyzeRequest = await req.json();
+    const { cluster_id, model = "gpt-5-2025-08-07" }: AnalyzeRequest = await req.json();
 
     if (!cluster_id) {
       return new Response(
         JSON.stringify({ error: "cluster_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!openai_api_key) {
-      return new Response(
-        JSON.stringify({ error: "openai_api_key is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -84,36 +77,20 @@ serve(async (req) => {
     const sampleLog = sampleLogs?.[0];
 
     // Build the prompt
-    const prompt = buildAnalysisPrompt(cluster, sampleLog);
+    const userPrompt = buildAnalysisPrompt(cluster, sampleLog);
 
-    // Call OpenAI API
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openai_api_key}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 4096,
-        temperature: 0.2,
-      }),
-    });
-
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
-    }
-
-    const openaiData = await openaiResponse.json();
-    const assistantMessage = openaiData.choices?.[0]?.message?.content;
+    // Call Intuit LLM
+    console.log("🤖 Calling Intuit LLM for analysis...");
+    const assistantMessage = await callIntuitLLMWithSystem(
+      SYSTEM_PROMPT,
+      userPrompt,
+      model,
+      0.2,
+      4096
+    );
 
     if (!assistantMessage) {
-      throw new Error("No response from OpenAI");
+      throw new Error("No response from Intuit LLM");
     }
 
     // Parse the response
@@ -130,7 +107,6 @@ serve(async (req) => {
         patch: analysis.patch,
         confidence: analysis.confidence,
         model_used: model,
-        tokens_used: openaiData.usage?.total_tokens,
         raw_response: assistantMessage,
       })
       .select()
@@ -246,4 +222,3 @@ function parseAnalysisResponse(response: string): {
     confidence,
   };
 }
-
