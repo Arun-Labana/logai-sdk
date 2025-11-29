@@ -48,6 +48,12 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Test needs report module -->
+        <dependency>
+            <groupId>com.logai</groupId>
+            <artifactId>logai-report</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

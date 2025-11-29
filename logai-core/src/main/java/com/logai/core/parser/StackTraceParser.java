@@ -120,8 +120,9 @@ public class StackTraceParser {
             // Check for "Caused by:"
             Matcher causedByMatcher = CAUSED_BY_PATTERN.matcher(line);
             if (causedByMatcher.matches()) {
-                // Recursively parse the caused-by section
-                ParseResult causedByResult = parseLines(lines, currentIndex);
+                // Extract exception info from "Caused by:" line and parse remaining
+                String causedByExceptionLine = causedByMatcher.group(1);
+                ParseResult causedByResult = parseCausedBy(causedByExceptionLine, lines, currentIndex + 1);
                 causedBy = causedByResult.stackTrace;
                 currentIndex = causedByResult.endIndex;
                 break;
@@ -212,6 +213,67 @@ public class StackTraceParser {
             return firstLine.substring(0, colonIndex).trim();
         }
         return firstLine;
+    }
+
+    /**
+     * Parse a "Caused by:" section where we already extracted the exception line.
+     */
+    private ParseResult parseCausedBy(String exceptionLine, String[] lines, int startIndex) {
+        String exceptionClass = null;
+        String exceptionMessage = null;
+        
+        // Parse the exception line
+        Matcher exceptionMatcher = EXCEPTION_PATTERN.matcher(exceptionLine.trim());
+        if (exceptionMatcher.matches()) {
+            exceptionClass = exceptionMatcher.group(1);
+            exceptionMessage = exceptionMatcher.group(2);
+        } else {
+            int colonIndex = exceptionLine.indexOf(':');
+            if (colonIndex > 0) {
+                exceptionClass = exceptionLine.substring(0, colonIndex).trim();
+                exceptionMessage = exceptionLine.substring(colonIndex + 1).trim();
+            } else {
+                exceptionClass = exceptionLine.trim();
+            }
+        }
+        
+        List<StackFrame> frames = new ArrayList<>();
+        ParsedStackTrace causedBy = null;
+        int currentIndex = startIndex;
+        
+        // Parse stack frames
+        while (currentIndex < lines.length) {
+            String line = lines[currentIndex];
+            
+            // Check for another "Caused by:"
+            Matcher causedByMatcher = CAUSED_BY_PATTERN.matcher(line);
+            if (causedByMatcher.matches()) {
+                String nestedExceptionLine = causedByMatcher.group(1);
+                ParseResult nestedResult = parseCausedBy(nestedExceptionLine, lines, currentIndex + 1);
+                causedBy = nestedResult.stackTrace;
+                currentIndex = nestedResult.endIndex;
+                break;
+            }
+            
+            // Check for "... N more"
+            Matcher moreMatcher = MORE_PATTERN.matcher(line);
+            if (moreMatcher.matches()) {
+                currentIndex++;
+                continue;
+            }
+            
+            // Try to parse as stack frame
+            StackFrame frame = parseFrame(line);
+            if (frame != null) {
+                frames.add(frame);
+                currentIndex++;
+            } else {
+                break;
+            }
+        }
+        
+        ParsedStackTrace stackTrace = new ParsedStackTrace(exceptionClass, exceptionMessage, frames, causedBy);
+        return new ParseResult(stackTrace, currentIndex);
     }
 
     private static class ParseResult {
